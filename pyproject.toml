@@ -1,0 +1,24 @@
+[project]
+name = "libanoncai"
+version = "1.0.0"
+authors = [
+  { name="piopysp", email="admin@mail.roominator.xyz" },
+]
+description = "Libanoncai"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+dependencies = [
+    "requests",
+    "aiohttp",
+    "PyCharacterAI",
+]
+
+[project.urls]
+Homepage = "https://github.com/RoominatorAI/libanoncai"
+Issues = "https://github.com/RoominatorAI/libanoncai/issues"
