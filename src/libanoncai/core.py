@@ -2,9 +2,16 @@
 import requests
 import json
 from urllib.parse import quote
-from .types import PcharacterMedium,Pcharacter
+from .types import PcharacterMedium,Pcharacter, AnonUser
 import aiohttp
+import re
 # Copilot tried to import aiohttp 4 TIMES. i am not even kidding. I had to remove the extra imports.
+def get_latest_build_id(): # Makes sure that next.js calls actually work
+    homepage = requests.get("https://character.ai")
+    match = re.search(r'"buildId":"(.*?)"', homepage.text)
+    if match:
+        return match.group(1)
+    return None
 class Client():
 
     def __init__(self):
@@ -94,6 +101,20 @@ class Client():
         else:
             print(f"💀 Get API be angy! {res['error']}")
             return None # We should honestly return an error in-ui but eh, it'll be fine for now.
+
+    def get_anonymous_user(self,username):
+
+        url = f"https://character.ai/_next/data/{get_latest_build_id()}/profile/{username}.json?username={username}" # Somehow this URL works. I don't know
+        # Nextjs is just black magic to me.
+        cheaders = self.anoncaiheaders.copy()
+        cheaders["x-nextjs-data"] = "1" # Makes sure next doesnt spam us with html. We only need the json data.
+        res = requests.get(url,headers=cheaders)
+
+        if res.status_code == 200:
+            data = res.json().get("pageProps",{}).get("dehydratedState",{}).get("queries",[])[0].get("state",{}).get("data",{})
+            # holy shit thats a lot of get calls. I don't know how this works.
+            return AnonUser(data)
+
 
     def multiget_anonymous_chardef(self,character_ids):
         amount = len(character_ids)
@@ -218,3 +239,17 @@ class AsyncClient(Client):
                 data = await response.json()
                 return [PcharacterMedium(r["result"]["data"]["json"]["character"]) 
                         for r in data if r["result"]["data"]["json"]["status"] == "OK"]
+    
+    async def get_anonymous_user(self,username):
+        url = f"https://character.ai/_next/data/{get_latest_build_id()}/profile/{username}.json?username={username}" # Somehow this URL works. I don't know
+        # Nextjs is just black magic to me.
+        cheaders = self.anoncaiheaders.copy()
+        cheaders["x-nextjs-data"] = "1" # Makes sure next doesnt spam us with html. We only need the json data.
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=cheaders) as res:
+
+                if res.status == 200:
+                    decoded = await res.json()
+                    data = decoded.get("pageProps",{}).get("dehydratedState",{}).get("queries",[])[0].get("state",{}).get("data",{})
+                    # holy shit thats a lot of get calls. I don't know how this works.
+                    return AnonUser(data)
