@@ -5,6 +5,7 @@ from urllib.parse import quote
 from .types import PcharacterMedium,Pcharacter, AnonUser
 import aiohttp
 import re
+import asyncio
 # Copilot tried to import aiohttp 4 TIMES. i am not even kidding. I had to remove the extra imports.
 def get_latest_build_id(): # Makes sure that next.js calls actually work
     homepage = requests.get("https://character.ai")

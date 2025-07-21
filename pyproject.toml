@@ -1,6 +1,6 @@
 [project]
 name = "libanoncai"
-version = "1.2.0"
+version = "1.2.1"
 authors = [
   { name="piopysp", email="admin@mail.roominator.xyz" },
 ]
