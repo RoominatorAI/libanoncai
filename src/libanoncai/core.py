@@ -116,32 +116,35 @@ class Client():
             return AnonUser(data)
 
 
-    def multiget_anonymous_chardef(self,character_ids):
-        amount = len(character_ids)
-        payload = {
-        }
-        for index,charid in enumerate(character_ids):
-            payload[str(index)] = {
-                "json": {
-                    "externalId": charid
-                }
+
+    def multiget_anonymous_chardef(self, character_ids):
+        def fetch_chunk(chunk):
+            payload = {
+                str(i): {"json": {"externalId": cid}} for i, cid in enumerate(chunk)
             }
-        commands = ""
-        for index in range(amount):
-            commands += "character.info"
-            if index != amount - 1:
-                commands += ","
-        url = f"https://character.ai/api/trpc/{commands}?batch={amount}&input=" + requests.utils.quote(json.dumps(payload))
-        res = requests.get(url, headers=self.anoncaiheaders)
-        data = res.json()
-        out = []
-        for result in data:
-            res = result["result"]["data"]["json"]
-            if res["status"] == "OK":
-                out.append(PcharacterMedium(res["character"]))
-            else:
-                print(f"💀 Multiget API be angy! {res['error']}")
-        return out
+            commands = ",".join(["character.info"] * len(chunk))
+            url = (
+                f"https://character.ai/api/trpc/{commands}?batch={len(chunk)}&input=" +
+                requests.utils.quote(json.dumps(payload))
+            )
+
+            res = requests.get(url, headers=self.anoncaiheaders)
+            data = res.json()
+            out = []
+            for result in data:
+                resdata = result["result"]["data"]["json"]
+                if resdata["status"] == "OK":
+                    out.append(PcharacterMedium(resdata["character"]))
+                else:
+                    print(f"💀 Multiget API be angy! {resdata['error']}")
+            return out
+
+        chunk_size = 10
+        results = []
+        for i in range(0, len(character_ids), chunk_size):
+            chunk = character_ids[i:i + chunk_size]
+            results.extend(fetch_chunk(chunk))
+        return results
 
     def convertCharacterShortToPcharacterMedium(self,character):
         """Converts a CharacterShort to a PcharacterMedium. This is useful for when you want to use the PcharacterMedium class but you have a CharacterShort."""
@@ -230,15 +233,29 @@ class AsyncClient(Client):
                 return PcharacterMedium(res["character"]) if res["status"] == "OK" else None
 
     async def multiget_anonymous_chardef(self, character_ids):
-        payload = {str(i): {"json": {"externalId": cid}} for i, cid in enumerate(character_ids)}
-        commands = ",".join(["character.info"] * len(character_ids))
-        url = f"https://character.ai/api/trpc/{commands}?batch={len(character_ids)}&input=" + quote(json.dumps(payload))
-        
-        async with aiohttp.ClientSession() as session:
+        async def fetch_chunk(session, chunk):
+            payload = {str(i): {"json": {"externalId": cid}} for i, cid in enumerate(chunk)}
+            commands = ",".join(["character.info"] * len(chunk))
+            url = f"https://character.ai/api/trpc/{commands}?batch={len(chunk)}&input=" + quote(json.dumps(payload))
+
             async with session.get(url, headers=self.anoncaiheaders) as response:
                 data = await response.json()
                 return [PcharacterMedium(r["result"]["data"]["json"]["character"]) 
                         for r in data if r["result"]["data"]["json"]["status"] == "OK"]
+
+        results = []
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            chunk_size = 10
+            for i in range(0, len(character_ids), chunk_size):
+                chunk = character_ids[i:i + chunk_size]
+                tasks.append(fetch_chunk(session, chunk))
+
+            chunks_results = await asyncio.gather(*tasks)
+            for res in chunks_results:
+                results.extend(res)
+
+        return results
     
     async def get_anonymous_user(self,username):
         url = f"https://character.ai/_next/data/{get_latest_build_id()}/profile/{username}.json?username={username}" # Somehow this URL works. I don't know
