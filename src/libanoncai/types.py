@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 
-from PyCharacterAI.types import CharacterShort,Character
 from enum import Enum, StrEnum
 import requests
 class SubscriptionType(StrEnum):
     Free = "NONE"
     Premium = "PLUS"
 
-class PcharacterMedium(CharacterShort):
+class PcharacterMedium():
     """CharacterShort but with slightly more data. Useful for checking if a bot has a privated definition"""
     def __init__(self, options):
-        super().__init__(options)
+        self.character_id = options.get("external_id")
+        self.title = options.get("title", "")
+        self.name = options.get("participant__name", None) 
         self.HasDefinition = options.get("has_definition",False)
+        self.greeting = options.get("greeting", "")
+        self.description = options.get("description", "")
+        self.definition = options.get("definition", "")
     def isDefinitionPrivate(self):
         """Checks if the HasDefinition is True and if the definition field is empty"""
         if self.HasDefinition and self.definition == "":
@@ -22,10 +26,16 @@ class PcharacterMedium(CharacterShort):
         """Checks if the HasDefinition is True and if the definition field is not empty"""
         return not self.isDefinitionPrivate()
 
-class Pcharacter(Character):
+class Pcharacter():
     """Character but with slightly more data. Useful for checking if a bot has a privated definition"""
     def __init__(self, options):
-        super().__init__(options)
+        self.character_id = options.get("external_id")
+        self.title = options.get("title", "")
+        self.name = options.get("participant__name", None) 
+        self.HasDefinition = options.get("has_definition",False)
+        self.greeting = options.get("greeting", "")
+        self.description = options.get("description", "")
+        self.definition = options.get("definition", "")
         self.HasDefinition = options.get("has_definition",False)
     def isDefinitionPrivate(self):
         """Checks if the HasDefinition is True and if the definition field is empty"""
@@ -44,7 +54,7 @@ class AnonUser:
     def __init__(self,object):
         self.chars = []
         for char in object.get("characters",[]):
-            self.chars.append(CharacterShort(char)) # Pcharacter requires data that isnt available from object so we just use normal character here.
+            self.chars.append(PcharacterShort(char)) # Pcharacter requires data that isnt available from object so we just use normal character here.
         self.username = object.get("username")
         self.description = object.get("bio")
         self.subscription = SubscriptionType(object.get("subscription_type","NONE"))
